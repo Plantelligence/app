@@ -3,7 +3,8 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-"scripts": {
+  "scripts": {
+    "prebuild": "node ../scripts/prepare-vercel-api.mjs",
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
