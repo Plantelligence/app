@@ -5,12 +5,12 @@ import { database } from '../services/database.js';
 
 const router = Router();
 
-router.get('/secure-data', authenticate, requireRole('Admin'), async (req, res) => {
-  const userCountRow = await database.get('SELECT COUNT(1) as total FROM users');
+router.get('/secure-data', authenticate, requireRole('Admin'), async (_req, res) => {
+  const totalUsers = await database.count('users');
   return res.json({
     message: 'Acesso concedido apenas a administradores.',
     metrics: {
-      totalUsers: userCountRow?.total ?? 0
+      totalUsers
     }
   });
 });

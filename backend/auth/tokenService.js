@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
 import { database } from '../services/database.js';
 import { settings } from '../config/settings.js';
@@ -8,7 +9,7 @@ export const hashToken = (token) =>
   crypto.createHash('sha256').update(token).digest('hex');
 
 export const generateAccessToken = async (user) => {
-  const jti = crypto.randomUUID();
+  const jti = uuidv4();
   const expiresAt = new Date(Date.now() + settings.accessTokenTtlSeconds * 1000);
   const payload = {
     sub: user.id,
@@ -30,7 +31,7 @@ export const generateAccessToken = async (user) => {
 };
 
 export const generateRefreshToken = async (user) => {
-  const jti = crypto.randomUUID();
+  const jti = uuidv4();
   const expiresAt = new Date(Date.now() + settings.refreshTokenTtlSeconds * 1000);
   const payload = {
     sub: user.id,
@@ -43,19 +44,18 @@ export const generateRefreshToken = async (user) => {
     issuer: 'plantelligence-backend'
   });
 
-  await database.run(
-    `INSERT INTO tokens (id, user_id, token_hash, jti, type, expires_at, revoked, created_at)
-     VALUES (?, ?, ?, ?, 'refresh', ?, 0, ?)`
-      ,
-    [
-      crypto.randomUUID(),
-      user.id,
-      hashToken(token),
+  await database.run('tokens', {
+    id: uuidv4(),
+    data: {
+      user_id: user.id,
+      token_hash: hashToken(token),
       jti,
-      expiresAt.toISOString(),
-      new Date().toISOString()
-    ]
-  );
+      type: 'refresh',
+      expires_at: expiresAt.toISOString(),
+      revoked: false,
+      created_at: new Date().toISOString()
+    }
+  });
 
   await logSecurityEvent({
     userId: user.id,
@@ -71,10 +71,12 @@ export const verifyAccessToken = async (token) => {
     issuer: 'plantelligence-backend'
   });
 
-  const revoked = await database.get(
-    `SELECT id FROM tokens WHERE jti = ? AND type = 'access_revocation' LIMIT 1`,
-    [payload.jti]
-  );
+  const revoked = await database.get('tokens', {
+    filters: [
+      { field: 'jti', value: payload.jti },
+      { field: 'type', value: 'access_revocation' }
+    ]
+  });
 
   if (revoked) {
     throw new jwt.JsonWebTokenError('Token has been revoked');
@@ -89,10 +91,12 @@ export const verifyRefreshToken = async (token) => {
   });
 
   const hashedToken = hashToken(token);
-  const record = await database.get(
-    `SELECT id, revoked, expires_at as expiresAt FROM tokens WHERE token_hash = ? AND type = 'refresh' LIMIT 1`,
-    [hashedToken]
-  );
+  const record = await database.get('tokens', {
+    filters: [
+      { field: 'token_hash', value: hashedToken },
+      { field: 'type', value: 'refresh' }
+    ]
+  });
 
   if (!record) {
     throw new jwt.JsonWebTokenError('Refresh token not recognized');
@@ -112,25 +116,36 @@ export const verifyRefreshToken = async (token) => {
 export const revokeRefreshToken = async (token) => {
   const hashedToken = hashToken(token);
 
-  await database.run(
-    `UPDATE tokens SET revoked = 1 WHERE token_hash = ? AND type = 'refresh'`,
-    [hashedToken]
-  );
+  const record = await database.get('tokens', {
+    filters: [
+      { field: 'token_hash', value: hashedToken },
+      { field: 'type', value: 'refresh' }
+    ]
+  });
+
+  if (!record) {
+    return;
+  }
+
+  await database.run('tokens', {
+    id: record.id,
+    data: { revoked: true, updated_at: new Date().toISOString() },
+    merge: true
+  });
 };
 
 export const revokeAccessTokenByJti = async (jti, userId, expiresAtIso) => {
-  await database.run(
-    `INSERT INTO tokens (id, user_id, jti, type, expires_at, revoked, created_at)
-     VALUES (?, ?, ?, 'access_revocation', ?, 1, ?)`
-      ,
-    [
-      crypto.randomUUID(),
-      userId,
+  await database.run('tokens', {
+    id: uuidv4(),
+    data: {
+      user_id: userId,
       jti,
-      expiresAtIso,
-      new Date().toISOString()
-    ]
-  );
+      type: 'access_revocation',
+      expires_at: expiresAtIso,
+      revoked: true,
+      created_at: new Date().toISOString()
+    }
+  });
 
   await logSecurityEvent({
     userId,
@@ -140,8 +155,25 @@ export const revokeAccessTokenByJti = async (jti, userId, expiresAtIso) => {
 };
 
 export const cleanupExpiredTokens = async () => {
-  await database.run(`DELETE FROM tokens WHERE datetime(expires_at) <= datetime('now')`);
-  await database.run(`DELETE FROM mfa_challenges WHERE datetime(expires_at) <= datetime('now')`);
+  const nowIso = new Date().toISOString();
+
+  const expiredTokens = await database.all('tokens', {
+    filters: [{ field: 'expires_at', operator: '<=', value: nowIso }]
+  });
+
+  for (const token of expiredTokens) {
+    // eslint-disable-next-line no-await-in-loop
+    await database.remove('tokens', { id: token.id });
+  }
+
+  const expiredChallenges = await database.all('mfa_challenges', {
+    filters: [{ field: 'expires_at', operator: '<=', value: nowIso }]
+  });
+
+  for (const challenge of expiredChallenges) {
+    // eslint-disable-next-line no-await-in-loop
+    await database.remove('mfa_challenges', { id: challenge.id });
+  }
 };
 
 export const issueSessionTokens = async (user) => {

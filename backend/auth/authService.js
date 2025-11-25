@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { database } from '../services/database.js';
 import { logSecurityEvent } from '../logs/logger.js';
 import {
@@ -19,55 +20,43 @@ import {
 import { settings } from '../config/settings.js';
 import { createMfaChallenge, verifyMfaChallenge } from './mfaService.js';
 
-const ensureMfaColumns = async () => {
-  const columns = await database.all(`PRAGMA table_info(users)`);
-  const columnNames = columns.map((column) => column.name);
+const USERS_COLLECTION = 'users';
+const TOKENS_COLLECTION = 'tokens';
 
-  if (!columnNames.includes('mfa_enabled')) {
-    try {
-      await database.run(`ALTER TABLE users ADD COLUMN mfa_enabled INTEGER NOT NULL DEFAULT 0`);
-    } catch (error) {
-      if (!error.message?.includes('duplicate column name')) {
-        throw error;
-      }
-    }
-  }
-
-  if (!columnNames.includes('mfa_configured_at')) {
-    try {
-      await database.run(`ALTER TABLE users ADD COLUMN mfa_configured_at TEXT`);
-    } catch (error) {
-      if (!error.message?.includes('duplicate column name')) {
-        throw error;
-      }
-    }
-  }
+export const initializeAuthService = async () => {
+  // Firestore é schemaless, então nenhuma migração de coluna é necessária no momento.
 };
-
-await ensureMfaColumns();
 
 const sanitizeUser = (row) => ({
   id: row.id,
   email: row.email,
   role: row.role,
-  fullName: row.full_name,
-  phone: row.phone,
+  fullName: row.full_name ?? null,
+  phone: row.phone ?? null,
   consentGiven: Boolean(row.consent_given),
-  consentTimestamp: row.consent_timestamp,
+  consentTimestamp: row.consent_timestamp ?? null,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
-  lastLoginAt: row.last_login_at,
-  passwordExpiresAt: row.password_expires_at,
+  lastLoginAt: row.last_login_at ?? null,
+  passwordExpiresAt: row.password_expires_at ?? null,
   deletionRequested: Boolean(row.deletion_requested),
   mfaEnabled: Boolean(row.mfa_enabled),
-  mfaConfiguredAt: row.mfa_configured_at
+  mfaConfiguredAt: row.mfa_configured_at ?? null
 });
 
 const findUserByEmail = (email) =>
-  database.get(
-    `SELECT * FROM users WHERE email = ? COLLATE NOCASE LIMIT 1`,
-    [email.trim().toLowerCase()]
-  );
+  database.get(USERS_COLLECTION, {
+    filters: [{ field: 'email', value: email.trim().toLowerCase() }]
+  });
+
+const hasExistingUsers = async () => {
+  try {
+    return (await database.count(USERS_COLLECTION)) > 0;
+  } catch (_error) {
+    const sample = await database.all(USERS_COLLECTION, { limit: 1 });
+    return sample.length > 0;
+  }
+};
 
 export const registerUser = async ({
   email,
@@ -91,30 +80,31 @@ export const registerUser = async ({
   const now = new Date().toISOString();
   const passwordExpiresAt = calculatePasswordExpiry();
   const consentGiven = Boolean(consent);
-  const userCountRow = await database.get('SELECT COUNT(1) as total FROM users');
-  const role = userCountRow?.total === 0 ? 'Admin' : 'User';
+  const isFirstUser = !(await hasExistingUsers());
+  const role = isFirstUser ? 'Admin' : 'User';
 
-  await database.run(
-    `INSERT INTO users (id, email, password_hash, role, full_name, phone, consent_given, consent_timestamp, created_at, updated_at, last_password_change, password_expires_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-      ,
-    [
-      crypto.randomUUID(),
-      normalizedEmail,
-      passwordHash,
+  const userId = uuidv4();
+
+  await database.run(USERS_COLLECTION, {
+    id: userId,
+    data: {
+      email: normalizedEmail,
+      password_hash: passwordHash,
       role,
-      fullName?.trim() ?? null,
-      phone?.trim() ?? null,
-      consentGiven ? 1 : 0,
-      consentGiven ? now : null,
-      now,
-      now,
-      now,
-      passwordExpiresAt
-    ]
-  );
+      full_name: fullName?.trim() ?? null,
+      phone: phone?.trim() ?? null,
+      consent_given: consentGiven,
+      consent_timestamp: consentGiven ? now : null,
+      created_at: now,
+      updated_at: now,
+      last_password_change: now,
+      password_expires_at: passwordExpiresAt,
+      mfa_enabled: false,
+      deletion_requested: false
+    }
+  });
 
-  const user = await findUserByEmail(normalizedEmail);
+  const user = await database.get(USERS_COLLECTION, { id: userId });
 
   await logSecurityEvent({
     userId: user.id,
@@ -182,10 +172,14 @@ export const completeMfa = async ({ challengeId, code, ipAddress }) => {
 
   const now = new Date().toISOString();
 
-  await database.run(
-    `UPDATE users SET last_login_at = ?, updated_at = ? WHERE id = ?`,
-    [now, now, user.id]
-  );
+  await database.run(USERS_COLLECTION, {
+    id: user.id,
+    data: {
+      last_login_at: now,
+      updated_at: now
+    },
+    merge: true
+  });
 
   const tokens = await issueSessionTokens(user);
 
@@ -203,7 +197,7 @@ export const completeMfa = async ({ challengeId, code, ipAddress }) => {
     ipAddress
   });
 
-  const refreshedUser = await database.get(`SELECT * FROM users WHERE id = ? LIMIT 1`, [user.id]);
+  const refreshedUser = await database.get(USERS_COLLECTION, { id: user.id });
 
   return {
     user: sanitizeUser(refreshedUser),
@@ -214,7 +208,7 @@ export const completeMfa = async ({ challengeId, code, ipAddress }) => {
 
 export const refreshSession = async ({ refreshToken }) => {
   const payload = await verifyRefreshToken(refreshToken);
-  const user = await database.get(`SELECT * FROM users WHERE id = ? LIMIT 1`, [payload.sub]);
+  const user = await database.get(USERS_COLLECTION, { id: payload.sub });
 
   if (!user) {
     throw new Error('Usuário não encontrado.');
@@ -249,7 +243,7 @@ export const revokeSession = async ({ refreshToken, accessJti, userId, ipAddress
 };
 
 export const changePassword = async ({ userId, currentPassword, newPassword }) => {
-  const user = await database.get(`SELECT * FROM users WHERE id = ? LIMIT 1`, [userId]);
+  const user = await database.get(USERS_COLLECTION, { id: userId });
 
   if (!user) {
     throw new Error('Usuário não encontrado.');
@@ -269,10 +263,16 @@ export const changePassword = async ({ userId, currentPassword, newPassword }) =
   const now = new Date().toISOString();
   const passwordExpiresAt = calculatePasswordExpiry();
 
-  await database.run(
-    `UPDATE users SET password_hash = ?, last_password_change = ?, password_expires_at = ?, updated_at = ? WHERE id = ?`,
-    [passwordHash, now, passwordExpiresAt, now, userId]
-  );
+  await database.run(USERS_COLLECTION, {
+    id: userId,
+    data: {
+      password_hash: passwordHash,
+      last_password_change: now,
+      password_expires_at: passwordExpiresAt,
+      updated_at: now
+    },
+    merge: true
+  });
 
   await logSecurityEvent({
     userId,
@@ -296,18 +296,17 @@ export const requestPasswordReset = async ({ email }) => {
   const tokenHash = hashToken(rawToken);
   const expiresAt = new Date(Date.now() + settings.passwordResetTtlSeconds * 1000);
 
-  await database.run(
-    `INSERT INTO tokens (id, user_id, token_hash, type, expires_at, revoked, created_at)
-     VALUES (?, ?, ?, 'password_reset', ?, 0, ?)`
-      ,
-    [
-      crypto.randomUUID(),
-      user.id,
-      tokenHash,
-      expiresAt.toISOString(),
-      new Date().toISOString()
-    ]
-  );
+  await database.run(TOKENS_COLLECTION, {
+    id: uuidv4(),
+    data: {
+      user_id: user.id,
+      token_hash: tokenHash,
+      type: 'password_reset',
+      expires_at: expiresAt.toISOString(),
+      revoked: false,
+      created_at: new Date().toISOString()
+    }
+  });
 
   const resetLink = `https://demo.plantelligence/reset?token=${rawToken}`;
 
@@ -326,10 +325,12 @@ export const requestPasswordReset = async ({ email }) => {
 
 export const resetPassword = async ({ token, newPassword }) => {
   const tokenHash = hashToken(token);
-  const record = await database.get(
-    `SELECT * FROM tokens WHERE token_hash = ? AND type = 'password_reset' LIMIT 1`,
-    [tokenHash]
-  );
+  const record = await database.get(TOKENS_COLLECTION, {
+    filters: [
+      { field: 'token_hash', value: tokenHash },
+      { field: 'type', value: 'password_reset' }
+    ]
+  });
 
   if (!record) {
     throw new Error('Token inválido.');
@@ -351,15 +352,25 @@ export const resetPassword = async ({ token, newPassword }) => {
   const now = new Date().toISOString();
   const passwordExpiresAt = calculatePasswordExpiry();
 
-  await database.run(
-    `UPDATE users SET password_hash = ?, last_password_change = ?, password_expires_at = ?, updated_at = ? WHERE id = ?`,
-    [passwordHash, now, passwordExpiresAt, now, record.user_id]
-  );
+  await database.run(USERS_COLLECTION, {
+    id: record.user_id,
+    data: {
+      password_hash: passwordHash,
+      last_password_change: now,
+      password_expires_at: passwordExpiresAt,
+      updated_at: now
+    },
+    merge: true
+  });
 
-  await database.run(
-    `UPDATE tokens SET revoked = 1 WHERE id = ?`,
-    [record.id]
-  );
+  await database.run(TOKENS_COLLECTION, {
+    id: record.id,
+    data: {
+      revoked: true,
+      updated_at: now
+    },
+    merge: true
+  });
 
   await logSecurityEvent({
     userId: record.user_id,
@@ -368,7 +379,7 @@ export const resetPassword = async ({ token, newPassword }) => {
 };
 
 export const getUserProfile = async (userId) => {
-  const user = await database.get(`SELECT * FROM users WHERE id = ? LIMIT 1`, [userId]);
+  const user = await database.get(USERS_COLLECTION, { id: userId });
   if (!user) {
     throw new Error('Usuário não encontrado.');
   }
@@ -382,18 +393,27 @@ export const updateUserProfile = async ({
   consentGiven
 }) => {
   const now = new Date().toISOString();
-  await database.run(
-    `UPDATE users SET full_name = ?, phone = ?, consent_given = ?, consent_timestamp = CASE WHEN ? = 1 THEN COALESCE(consent_timestamp, ?) ELSE consent_timestamp END, updated_at = ? WHERE id = ?`,
-    [
-      fullName?.trim() ?? null,
-      phone?.trim() ?? null,
-      consentGiven ? 1 : 0,
-      consentGiven ? 1 : 0,
-      consentGiven ? now : null,
-      now,
-      userId
-    ]
-  );
+  const existing = await database.get(USERS_COLLECTION, { id: userId });
+
+  if (!existing) {
+    throw new Error('Usuário não encontrado.');
+  }
+
+  const consentTimestamp = consentGiven
+    ? existing.consent_timestamp ?? now
+    : existing.consent_timestamp ?? null;
+
+  await database.run(USERS_COLLECTION, {
+    id: userId,
+    data: {
+      full_name: fullName?.trim() ?? null,
+      phone: phone?.trim() ?? null,
+      consent_given: Boolean(consentGiven),
+      consent_timestamp: consentTimestamp,
+      updated_at: now
+    },
+    merge: true
+  });
 
   await logSecurityEvent({
     userId,
@@ -405,10 +425,14 @@ export const updateUserProfile = async ({
 };
 
 export const requestDataDeletion = async ({ userId, reason }) => {
-  await database.run(
-    `UPDATE users SET deletion_requested = 1, updated_at = ? WHERE id = ?`,
-    [new Date().toISOString(), userId]
-  );
+  await database.run(USERS_COLLECTION, {
+    id: userId,
+    data: {
+      deletion_requested: true,
+      updated_at: new Date().toISOString()
+    },
+    merge: true
+  });
 
   await logSecurityEvent({
     userId,

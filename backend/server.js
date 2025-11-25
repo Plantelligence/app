@@ -6,8 +6,8 @@ import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import cryptoRoutes from './routes/cryptoRoutes.js';
-import { cleanupExpiredTokens } from './auth/tokenService.js';
 import { logSecurityEvent } from './logs/logger.js';
+import { initializeAuthService } from './auth/authService.js';
 
 const app = express();
 
@@ -52,17 +52,30 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ message: 'Erro interno.' });
 });
 
-const server = app.listen(settings.port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Plantelligence backend listening on port ${settings.port}`);
-});
+const startServer = async () => {
+  try {
+    await initializeAuthService();
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to initialize backend services', error);
+    process.exit(1);
+  }
 
-process.on('SIGINT', () => {
-  server.close(() => {
-    process.exit(0);
+  const server = app.listen(settings.port, () => {
+    // eslint-disable-next-line no-console
+    console.log(`Plantelligence backend listening on port ${settings.port}`);
   });
+
+  process.on('SIGINT', () => {
+    server.close(() => {
+      process.exit(0);
+    });
+  });
+};
+
+startServer().catch((error) => {
+  // eslint-disable-next-line no-console
+  console.error('Unhandled startup error', error);
+  process.exit(1);
 });
 
-setInterval(() => {
-  cleanupExpiredTokens().catch(() => undefined);
-}, 60_000);

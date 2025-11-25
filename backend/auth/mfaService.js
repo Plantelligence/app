@@ -1,4 +1,5 @@
 import crypto from 'crypto';
+import { v4 as uuidv4 } from 'uuid';
 import { database } from '../services/database.js';
 import { hashToken } from './tokenService.js';
 import { logSecurityEvent } from '../logs/logger.js';
@@ -13,35 +14,32 @@ const createError = (message, statusCode = 400) => {
 };
 
 export const createMfaChallenge = async ({ userId, metadata = {} }) => {
-  await database.run(`DELETE FROM mfa_challenges WHERE user_id = ?`, [userId]);
+  await database.remove('mfa_challenges', {
+    filters: [{ field: 'user_id', value: userId }]
+  });
 
   const code = crypto.randomInt(0, 1_000_000).toString().padStart(6, '0');
-  const challengeId = crypto.randomUUID();
+  const challengeId = uuidv4();
   const now = new Date();
   const expiresAt = new Date(now.getTime() + MFA_TTL_SECONDS * 1000).toISOString();
 
-  await database.run(
-    `INSERT INTO mfa_challenges (id, user_id, code_hash, expires_at, attempts, created_at, metadata)
-     VALUES (?, ?, ?, ?, 0, ?, ?)`
-      ,
-    [
-      challengeId,
-      userId,
-      hashToken(code),
-      expiresAt,
-      now.toISOString(),
-      JSON.stringify(metadata)
-    ]
-  );
+  await database.run('mfa_challenges', {
+    id: challengeId,
+    data: {
+      user_id: userId,
+      code_hash: hashToken(code),
+      expires_at: expiresAt,
+      attempts: 0,
+      created_at: now.toISOString(),
+      metadata
+    }
+  });
 
   return { challengeId, code, expiresAt };
 };
 
 export const verifyMfaChallenge = async ({ challengeId, code, ipAddress }) => {
-  const challenge = await database.get(
-    `SELECT * FROM mfa_challenges WHERE id = ? LIMIT 1`,
-    [challengeId]
-  );
+  const challenge = await database.get('mfa_challenges', { id: challengeId });
 
   if (!challenge) {
     await logSecurityEvent({
@@ -53,7 +51,7 @@ export const verifyMfaChallenge = async ({ challengeId, code, ipAddress }) => {
   }
 
   if (new Date(challenge.expires_at).getTime() <= Date.now()) {
-    await database.run(`DELETE FROM mfa_challenges WHERE id = ?`, [challengeId]);
+    await database.remove('mfa_challenges', { id: challengeId });
     await logSecurityEvent({
       userId: challenge.user_id,
       action: 'mfa_code_expired',
@@ -76,22 +74,24 @@ export const verifyMfaChallenge = async ({ challengeId, code, ipAddress }) => {
   const providedHash = hashToken(code);
 
   if (providedHash !== challenge.code_hash) {
-    await database.run(
-      `UPDATE mfa_challenges SET attempts = attempts + 1 WHERE id = ?`,
-      [challengeId]
-    );
+    const updatedAttempts = (challenge.attempts ?? 0) + 1;
+    await database.run('mfa_challenges', {
+      id: challengeId,
+      data: { attempts: updatedAttempts },
+      merge: true
+    });
     await logSecurityEvent({
       userId: challenge.user_id,
       action: 'mfa_code_invalid',
-      metadata: { challengeId, attempts: challenge.attempts + 1 },
+      metadata: { challengeId, attempts: updatedAttempts },
       ipAddress
     });
     throw createError('Código MFA inválido.', 401);
   }
 
-  await database.run(`DELETE FROM mfa_challenges WHERE id = ?`, [challengeId]);
+  await database.remove('mfa_challenges', { id: challengeId });
 
-  const user = await database.get(`SELECT * FROM users WHERE id = ? LIMIT 1`, [challenge.user_id]);
+  const user = await database.get('users', { id: challenge.user_id });
 
   if (!user) {
     throw createError('Usuário associado ao desafio não encontrado.', 404);
@@ -99,7 +99,7 @@ export const verifyMfaChallenge = async ({ challengeId, code, ipAddress }) => {
 
   return {
     user,
-    metadata: challenge.metadata ? JSON.parse(challenge.metadata) : {},
+    metadata: challenge.metadata ?? {},
     challenge
   };
 };
