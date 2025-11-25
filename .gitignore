@@ -5,4 +5,5 @@ backend/.env
 backend/db.sqlite
 backend/logs/*.log
 backend/firebase-key.json
+frontend/api/
 .DS_Store
