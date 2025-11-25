@@ -27,6 +27,10 @@
       "dest": "/frontend/api/index.js"
     },
     {
+      "src": "/",
+      "dest": "/frontend/dist/index.html"
+    },
+    {
       "src": "/assets/(.*)",
       "dest": "/frontend/dist/assets/$1"
     },
