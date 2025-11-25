@@ -15,7 +15,7 @@
       "use": "@vercel/node",
       "config": {
         "includeFiles": [
-          "frontend/api/backend/**",
+          "frontend/api/**",
           "backend/node_modules/**"
         ]
       }
