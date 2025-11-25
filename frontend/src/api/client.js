@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore.js';
 
-const apiBasePath = '/api/backend';
+const apiBasePath = '/api';
 
 const api = axios.create({
   baseURL: apiBasePath
