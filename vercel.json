@@ -1,29 +1,30 @@
 {
-  "installCommand": "npm install --workspaces --if-present",
-  
+  "version": 2,
   "builds": [
     {
       "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
         "outputDirectory": "frontend/dist",
-        "buildCommand": "mkdir -p frontend/api && cp backend/index.js frontend/api/index.js && npm run build --workspace=plantelligence-frontend"
+        "buildCommand": "npm run build --workspace=plantelligence-frontend"
       }
     },
     {
-      "src": "frontend/api/index.js",
-      "use": "@vercel/node"
+      "src": "backend/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": ["backend/node_modules/**"]
+      }
     }
   ],
-  
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "frontend/api/index.js"
+      "dest": "/frontend/api/index.js"
     },
     {
       "src": "/(.*)",
-      "dest": "frontend/dist/index.html"
+      "dest": "/frontend/dist/index.html"
     }
   ]
 }
