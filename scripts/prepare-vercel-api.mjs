@@ -32,7 +32,7 @@ await cp(backendDir, backendCopyDir, {
   }
 });
 
-const indexContent = `import app from './backend/server.js';
+const indexContent = `import app from './backend/index.js';
 
 export default app;
 `;
