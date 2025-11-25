@@ -7,7 +7,6 @@
     "frontend"
   ],
   "scripts": {
-    "postinstall": "npm run build --workspaces --if-present",
     "dev": "concurrently -n backend,frontend -c \"magenta,cyan\" \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
     "lint": "npm run lint --workspaces --if-present",
     "test": "npm run test --workspaces --if-present"
