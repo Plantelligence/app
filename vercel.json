@@ -1,9 +1,9 @@
 {
   "version": 2,
-  "installCommand": "npm install",
+  "installCommand": "npm install --workspaces --if-present",
   "builds": [
     {
-      "src": "frontend/index.html",
+      "src": "frontend/package.json",
       "use": "@vercel/static-build",
       "config": {
         "outputDirectory": "frontend/dist",
