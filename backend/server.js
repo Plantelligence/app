@@ -52,30 +52,43 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ message: 'Erro interno.' });
 });
 
-const startServer = async () => {
+let serverInstance;
+
+export const startServer = async () => {
+  if (serverInstance) {
+    return serverInstance;
+  }
+
   try {
     await initializeAuthService();
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to initialize backend services', error);
-    process.exit(1);
+    throw error;
   }
 
-  const server = app.listen(settings.port, () => {
+  serverInstance = app.listen(settings.port, () => {
     // eslint-disable-next-line no-console
     console.log(`Plantelligence backend listening on port ${settings.port}`);
   });
 
   process.on('SIGINT', () => {
-    server.close(() => {
+    serverInstance?.close(() => {
       process.exit(0);
     });
   });
+
+  return serverInstance;
 };
 
-startServer().catch((error) => {
-  // eslint-disable-next-line no-console
-  console.error('Unhandled startup error', error);
-  process.exit(1);
-});
+if (process.env.VERCEL !== '1') {
+  startServer().catch((error) => {
+    // eslint-disable-next-line no-console
+    console.error('Unhandled startup error', error);
+    process.exit(1);
+  });
+}
+
+export { app };
+export default app;
 

@@ -58,6 +58,9 @@ frontend/  # Aplicação React/Vite com Tailwind e gerenciamento de sessão JWT
 docs/      # Requisitos, LGPD e visão geral
 ```
 
+## Observação para Deploy na Vercel
+- O backend é exposto como função serverless em `/api`. Garanta que o frontend utilize caminhos relativos iniciados em `/api/` (ex.: `/api/auth/login`) para que as chamadas funcionem corretamente tanto localmente quanto no ambiente Vercel.
+
 ## Testes Manuais Recomendados
 - Explorar a landing page e acionar o login pelo botão "Entrar" no topo.
 - Cadastrar um novo usuário e realizar login (nota: o primeiro usuário vira Admin automaticamente).
