@@ -11,21 +11,31 @@
       }
     },
     {
-      "src": "backend/index.js",
-      "use": "@vercel/node"
+      "src": "frontend/api/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "includeFiles": [
+          "frontend/api/backend/**",
+          "backend/node_modules/**"
+        ]
+      }
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/backend/index.js"
+      "dest": "/frontend/api/index.js"
     },
     {
       "src": "/assets/(.*)",
       "dest": "/frontend/dist/assets/$1"
     },
     {
-      "src": "/(policy-styles.css|cookies.html|eula.html|privacidade.html|seguranca.html|termos.html|images/.*)",
+      "src": "/images/(.*)",
+      "dest": "/frontend/dist/images/$1"
+    },
+    {
+      "src": "/(policy-styles.css|cookies.html|eula.html|privacidade.html|seguranca.html|termos.html)",
       "dest": "/frontend/dist/$1"
     },
     {
