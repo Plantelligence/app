@@ -1,0 +1,22 @@
+{
+  "name": "plantelligence-system",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "postinstall": "npm run build --workspaces --if-present",
+    "dev": "concurrently -n backend,frontend -c \"magenta,cyan\" \"npm run dev --workspace backend\" \"npm run dev --workspace frontend\"",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "db:setup": "npm run db:setup --workspace backend"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "engines": {
+    "node": ">=18.18.0"
+  }
+}
