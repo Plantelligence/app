@@ -39,10 +39,10 @@ app.use(async (req, res, next) => {
 
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-app.use('/api/backend/auth', authRoutes);
-app.use('/api/backend/users', userRoutes);
-app.use('/api/backend/admin', adminRoutes);
-app.use('/api/backend/crypto', cryptoRoutes);
+app.use('/auth', authRoutes);
+app.use('/users', userRoutes);
+app.use('/admin', adminRoutes);
+app.use('/crypto', cryptoRoutes);
 
 app.use((req, res) => res.status(404).json({ message: 'Endpoint não encontrado.' }));
 
