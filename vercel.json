@@ -21,6 +21,14 @@
       "dest": "/backend/index.js"
     },
     {
+      "src": "/assets/(.*)",
+      "dest": "/frontend/dist/assets/$1"
+    },
+    {
+      "src": "/(policy-styles.css|cookies.html|eula.html|privacidade.html|seguranca.html|termos.html|images/.*)",
+      "dest": "/frontend/dist/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/frontend/dist/index.html"
     }
