@@ -10,10 +10,10 @@
       }
     },
     {
-      "src": "backend/index.js",
+      "src": "frontend/api/index.js",
       "use": "@vercel/node",
       "config": {
-        "includeFiles": ["backend/node_modules/**"]
+        "includeFiles": ["frontend/api/backend/**"]
       }
     }
   ],
