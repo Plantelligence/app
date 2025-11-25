@@ -31,7 +31,7 @@ export const settings = {
       try {
         return JSON.parse(rawValue);
       } catch (error) {
-        // eslint-disable-next-line no-console
+        // eslint-disable-next-line no-consolea
         console.warn('Invalid Firebase credentials JSON detected.', error);
         return null;
       }
