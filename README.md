@@ -2,7 +2,7 @@
 
 Módulo de segurança full stack para o ecossistema **Plantelligence**, automatizando estufas por tipo de planta. A demonstração apresenta uma experiência completa com landing page, autenticação forte (MFA), criptografia ponta a ponta e controles LGPD — tudo operando localmente.
 
-## Stack 
+## Stack
 - **Backend:** Node.js, Express, SQLite3, bcrypt, JWT, Helmet, Rate Limiter.
 - **Frontend:** React (Vite), Tailwind CSS, Zustand, Axios.
 - **Criptografia:** AES-256-GCM e RSA-2048 (OAEP-SHA256).
