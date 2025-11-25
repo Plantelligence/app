@@ -5,7 +5,7 @@ Módulo de segurança full stack para o ecossistema **Plantelligence**, automati
 ## Stack
 - **Backend:** Node.js, Express, SQLite3, bcrypt, JWT, Helmet, Rate Limiter.
 - **Frontend:** React (Vite), Tailwind CSS, Zustand, Axios.
-- **Criptografia:** AES-256-GCM e RSA-2048 (OAEP-SHA256).
+- **Criptografia:** AES-256-GCM e RSA-2048 (OAEP-SHA256). 
 
 ## Pré-requisitos
 - Node.js 18.18 ou superior.
