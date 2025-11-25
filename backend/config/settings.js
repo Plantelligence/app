@@ -48,7 +48,7 @@ export const settings = {
         const decoded = Buffer.from(trimmed, 'base64').toString('utf8');
         return parseJson(decoded);
       } catch (error) {
-        // eslint-disable-next-line no-console
+        // eslint-disable-next-line no-consolea
         console.warn('Failed to decode FIREBASE_CREDENTIALS_BASE64 value.', error);
         return null;
       }
