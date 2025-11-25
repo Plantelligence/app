@@ -1,8 +1,9 @@
 {
   "version": 2,
+  "installCommand": "npm install",
   "builds": [
     {
-      "src": "frontend/package.json",
+      "src": "frontend/index.html",
       "use": "@vercel/static-build",
       "config": {
         "outputDirectory": "frontend/dist",
@@ -10,20 +11,14 @@
       }
     },
     {
-      "src": "frontend/api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "includeFiles": [
-          "frontend/api/backend/**",
-          "backend/node_modules/**"
-        ]
-      }
+      "src": "backend/index.js",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/frontend/api/index.js"
+      "dest": "/backend/index.js"
     },
     {
       "src": "/(.*)",
