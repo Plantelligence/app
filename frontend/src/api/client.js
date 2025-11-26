@@ -1,10 +1,8 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore.js';
 
-const apiBasePath = '/api';
-
 const api = axios.create({
-  baseURL: apiBasePath
+  baseURL: '/api'
 });
 
 let refreshPromise = null;
@@ -17,7 +15,7 @@ const refreshSession = async () => {
       throw new Error('Refresh token not available');
     }
 
-    refreshPromise = fetch(`${apiBasePath}/auth/refresh`, {
+    refreshPromise = fetch('/api/auth/refresh', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

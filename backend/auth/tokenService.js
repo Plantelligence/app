@@ -1,24 +1,33 @@
 import crypto from 'crypto';
-import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
+import { Timestamp } from 'firebase-admin/firestore';
+import { v4 as uuid } from 'uuid';
 import { database } from '../services/database.js';
 import { settings } from '../config/settings.js';
 import { logSecurityEvent } from '../logs/logger.js';
+
+const TOKENS_COLLECTION = 'tokens';
+
+const isPasswordExpired = (passwordExpiresAt) => {
+  if (!passwordExpiresAt) {
+    return false;
+  }
+
+  return new Date(passwordExpiresAt).getTime() <= Date.now();
+};
 
 export const hashToken = (token) =>
   crypto.createHash('sha256').update(token).digest('hex');
 
 export const generateAccessToken = async (user) => {
-  const jti = uuidv4();
+  const jti = uuid();
   const expiresAt = new Date(Date.now() + settings.accessTokenTtlSeconds * 1000);
   const payload = {
     sub: user.id,
     email: user.email,
     role: user.role,
-    consent: Boolean(user.consent_given),
-    requiresPasswordReset:
-      user.password_expires_at !== null &&
-      new Date(user.password_expires_at).getTime() <= Date.now()
+    consent: Boolean(user.consentGiven),
+    requiresPasswordReset: isPasswordExpired(user.passwordExpiresAt)
   };
 
   const token = jwt.sign(payload, settings.jwtSecret, {
@@ -31,7 +40,7 @@ export const generateAccessToken = async (user) => {
 };
 
 export const generateRefreshToken = async (user) => {
-  const jti = uuidv4();
+  const jti = uuid();
   const expiresAt = new Date(Date.now() + settings.refreshTokenTtlSeconds * 1000);
   const payload = {
     sub: user.id,
@@ -44,17 +53,20 @@ export const generateRefreshToken = async (user) => {
     issuer: 'plantelligence-backend'
   });
 
-  await database.run('tokens', {
-    id: uuidv4(),
-    data: {
-      user_id: user.id,
-      token_hash: hashToken(token),
-      jti,
-      type: 'refresh',
-      expires_at: expiresAt.toISOString(),
-      revoked: false,
-      created_at: new Date().toISOString()
-    }
+  const tokenId = uuid();
+  const now = new Date();
+
+  await database.setDocument(TOKENS_COLLECTION, tokenId, {
+    id: tokenId,
+    userId: user.id,
+    tokenHash: hashToken(token),
+    jti,
+    type: 'refresh',
+    expiresAt: expiresAt.toISOString(),
+    expiresAtTs: Timestamp.fromDate(expiresAt),
+    revoked: false,
+    createdAt: now.toISOString(),
+    createdAtTs: Timestamp.fromDate(now)
   });
 
   await logSecurityEvent({
@@ -71,15 +83,17 @@ export const verifyAccessToken = async (token) => {
     issuer: 'plantelligence-backend'
   });
 
-  const revoked = await database.get('tokens', {
-    filters: [
-      { field: 'jti', value: payload.jti },
-      { field: 'type', value: 'access_revocation' }
-    ]
-  });
+  if (payload.jti) {
+    const revoked = await database.get(TOKENS_COLLECTION, (collectionRef) =>
+      collectionRef
+        .where('type', '==', 'access_revocation')
+        .where('jti', '==', payload.jti)
+        .limit(1)
+    );
 
-  if (revoked) {
-    throw new jwt.JsonWebTokenError('Token has been revoked');
+    if (revoked) {
+      throw new jwt.JsonWebTokenError('Token has been revoked');
+    }
   }
 
   return payload;
@@ -91,12 +105,12 @@ export const verifyRefreshToken = async (token) => {
   });
 
   const hashedToken = hashToken(token);
-  const record = await database.get('tokens', {
-    filters: [
-      { field: 'token_hash', value: hashedToken },
-      { field: 'type', value: 'refresh' }
-    ]
-  });
+  const record = await database.get(TOKENS_COLLECTION, (collectionRef) =>
+    collectionRef
+      .where('tokenHash', '==', hashedToken)
+      .where('type', '==', 'refresh')
+      .limit(1)
+  );
 
   if (!record) {
     throw new jwt.JsonWebTokenError('Refresh token not recognized');
@@ -106,7 +120,11 @@ export const verifyRefreshToken = async (token) => {
     throw new jwt.JsonWebTokenError('Refresh token revoked');
   }
 
-  if (new Date(record.expiresAt).getTime() <= Date.now()) {
+  const expiresAtDate = record.expiresAtTs
+    ? record.expiresAtTs.toDate()
+    : new Date(record.expiresAt);
+
+  if (expiresAtDate.getTime() <= Date.now()) {
     throw new jwt.JsonWebTokenError('Refresh token expired');
   }
 
@@ -115,36 +133,41 @@ export const verifyRefreshToken = async (token) => {
 
 export const revokeRefreshToken = async (token) => {
   const hashedToken = hashToken(token);
-
-  const record = await database.get('tokens', {
-    filters: [
-      { field: 'token_hash', value: hashedToken },
-      { field: 'type', value: 'refresh' }
-    ]
-  });
+  const record = await database.get(TOKENS_COLLECTION, (collectionRef) =>
+    collectionRef
+      .where('tokenHash', '==', hashedToken)
+      .where('type', '==', 'refresh')
+      .limit(1)
+  );
 
   if (!record) {
     return;
   }
 
-  await database.run('tokens', {
-    id: record.id,
-    data: { revoked: true, updated_at: new Date().toISOString() },
-    merge: true
+  const now = new Date();
+
+  await database.updateDocument(TOKENS_COLLECTION, record.id, {
+    revoked: true,
+    revokedAt: now.toISOString(),
+    revokedAtTs: Timestamp.fromDate(now)
   });
 };
 
 export const revokeAccessTokenByJti = async (jti, userId, expiresAtIso) => {
-  await database.run('tokens', {
-    id: uuidv4(),
-    data: {
-      user_id: userId,
-      jti,
-      type: 'access_revocation',
-      expires_at: expiresAtIso,
-      revoked: true,
-      created_at: new Date().toISOString()
-    }
+  const tokenId = uuid();
+  const createdAt = new Date();
+  const expiresAtDate = new Date(expiresAtIso);
+
+  await database.setDocument(TOKENS_COLLECTION, tokenId, {
+    id: tokenId,
+    userId,
+    jti,
+    type: 'access_revocation',
+    expiresAt: expiresAtIso,
+    expiresAtTs: Timestamp.fromDate(expiresAtDate),
+    revoked: true,
+    createdAt: createdAt.toISOString(),
+    createdAtTs: Timestamp.fromDate(createdAt)
   });
 
   await logSecurityEvent({
@@ -155,25 +178,15 @@ export const revokeAccessTokenByJti = async (jti, userId, expiresAtIso) => {
 };
 
 export const cleanupExpiredTokens = async () => {
-  const nowIso = new Date().toISOString();
+  const cutoff = Timestamp.now();
 
-  const expiredTokens = await database.all('tokens', {
-    filters: [{ field: 'expires_at', operator: '<=', value: nowIso }]
-  });
+  await database.deleteWhere(TOKENS_COLLECTION, (collectionRef) =>
+    collectionRef.where('expiresAtTs', '<=', cutoff)
+  );
 
-  for (const token of expiredTokens) {
-    // eslint-disable-next-line no-await-in-loop
-    await database.remove('tokens', { id: token.id });
-  }
-
-  const expiredChallenges = await database.all('mfa_challenges', {
-    filters: [{ field: 'expires_at', operator: '<=', value: nowIso }]
-  });
-
-  for (const challenge of expiredChallenges) {
-    // eslint-disable-next-line no-await-in-loop
-    await database.remove('mfa_challenges', { id: challenge.id });
-  }
+  await database.deleteWhere('mfa_challenges', (collectionRef) =>
+    collectionRef.where('expiresAtTs', '<=', cutoff)
+  );
 };
 
 export const issueSessionTokens = async (user) => {

@@ -5,9 +5,13 @@ import { LoginPage } from './pages/LoginPage.jsx';
 import { RegisterPage } from './pages/RegisterPage.jsx';
 import { PasswordResetPage } from './pages/PasswordResetPage.jsx';
 import { DashboardPage } from './pages/DashboardPage.jsx';
+import { UserSettingsPage } from './pages/UserSettingsPage.jsx';
+import { SecurityLogsPage } from './pages/SecurityLogsPage.jsx';
+import { AdminUsersPage } from './pages/AdminUsersPage.jsx';
 import { TechnologyPage } from './pages/TechnologyPage.jsx';
 import { TopNav } from './components/TopNav.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
+import { AdminRoute } from './components/AdminRoute.jsx';
 import { useAuthStore } from './store/authStore.js';
 
 const COOKIE_STORAGE_KEY = 'plantelligence-cookie-consent';
@@ -16,13 +20,13 @@ const footerLinks = [
   {
     href: '/termos.html',
     label: 'Termos de Uso',
-    icon: 'fa-solid fa-file-contract',
+    icon: 'fa-solid fa-file-contract'
   },
   {
     href: '/privacidade.html',
     label: 'Política de Privacidade',
-    icon: 'fa-solid fa-user-shield',
-  },
+    icon: 'fa-solid fa-user-shield'
+  }
 ];
 
 const Footer = () => {
@@ -104,7 +108,8 @@ const Footer = () => {
               aria-modal="false"
               aria-live="polite"
               aria-labelledby="cookie-policy-title"
-              className="w-full max-w-2xl rounded-3xl border border-slate-700 bg-slate-900/95 p-6 shadow-2xl backdrop-blur">
+              className="w-full max-w-2xl rounded-3xl border border-slate-700 bg-slate-900/95 p-6 shadow-2xl backdrop-blur"
+            >
               <div className="flex flex-col gap-4 text-center">
                 <div className="space-y-2">
                   <h3 id="cookie-policy-title" className="text-lg font-semibold text-slate-50">
@@ -217,7 +222,7 @@ const AuthShell = () => (
 );
 
 const App = () => {
-  const user = useAuthStore((state) => state.user);
+  useAuthStore((state) => state.user);
 
   return (
     <Routes>
@@ -225,6 +230,11 @@ const App = () => {
         <Route index element={<TechnologyPage />} />
         <Route element={<ProtectedRoute />}>
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="settings" element={<UserSettingsPage />} />
+          <Route path="settings/logs" element={<SecurityLogsPage />} />
+          <Route element={<AdminRoute />}>
+            <Route path="admin/usuarios" element={<AdminUsersPage />} />
+          </Route>
         </Route>
       </Route>
       <Route element={<AuthShell />}>

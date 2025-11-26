@@ -1,13 +1,19 @@
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import { settings } from './config/settings.js';
+import { resolve as pathResolve } from 'path';
+import { fileURLToPath } from 'url';
+import { settings, getFirebaseApp } from './config/settings.js';
 import authRoutes from './routes/authRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import cryptoRoutes from './routes/cryptoRoutes.js';
+import greenhouseRoutes from './routes/greenhouseRoutes.js';
+import { cleanupExpiredTokens } from './auth/tokenService.js';
 import { logSecurityEvent } from './logs/logger.js';
-import { initializeAuthService } from './auth/authService.js';
+
+// Ensure Firebase is initialised early for both local and serverless runtimes.
+getFirebaseApp();
 
 const app = express();
 
@@ -37,12 +43,13 @@ app.use(async (req, res, next) => {
   next();
 });
 
-app.get('/api/health', (req, res) => res.json({ status: 'ok' }));
+app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/crypto', cryptoRoutes);
+app.use('/api/greenhouse', greenhouseRoutes);
 
 app.use((req, res) => res.status(404).json({ message: 'Endpoint não encontrado.' }));
 
@@ -52,19 +59,12 @@ app.use((err, req, res, _next) => {
   res.status(500).json({ message: 'Erro interno.' });
 });
 
+const isServerlessRuntime = Boolean(process.env.VERCEL || process.env.SERVERLESS);
 let serverInstance;
 
-export const startServer = async () => {
+const startHttpServer = () => {
   if (serverInstance) {
-    return serverInstance;
-  }
-
-  try {
-    await initializeAuthService();
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to initialize backend services', error);
-    throw error;
+    return;
   }
 
   serverInstance = app.listen(settings.port, () => {
@@ -78,17 +78,17 @@ export const startServer = async () => {
     });
   });
 
-  return serverInstance;
+  setInterval(() => {
+    cleanupExpiredTokens().catch(() => undefined);
+  }, 60_000);
 };
 
-if (process.env.VERCEL !== '1') {
-  startServer().catch((error) => {
-    // eslint-disable-next-line no-console
-    console.error('Unhandled startup error', error);
-    process.exit(1);
-  });
+const currentModulePath = fileURLToPath(import.meta.url);
+const entryPointPath = process.argv[1] ? pathResolve(process.argv[1]) : null;
+
+if (!isServerlessRuntime && entryPointPath === currentModulePath) {
+  startHttpServer();
 }
 
-export { app };
+export const handler = app;
 export default app;
-

@@ -7,8 +7,11 @@ import {
   getUserProfile,
   updateUserProfile,
   changePassword,
-  requestDataDeletion
+  requestDataDeletion,
+  startUserOtpEnrollment,
+  completeUserOtpEnrollment
 } from '../auth/authService.js';
+import { createMfaChallenge } from '../auth/mfaService.js';
 import { getSecurityLogs } from '../logs/logger.js';
 
 const router = Router();
@@ -38,11 +41,36 @@ router.put('/me', authenticate, async (req, res) => {
 
 router.post('/change-password', authenticate, async (req, res) => {
   try {
-    const { currentPassword, newPassword } = req.body;
-    await changePassword({ userId: req.user.id, currentPassword, newPassword });
+    const { currentPassword, newPassword, verification } = req.body;
+    await changePassword({
+      userId: req.user.id,
+      currentPassword,
+      newPassword,
+      verification,
+      ipAddress: req.ip
+    });
     return res.json({ message: 'Senha alterada com sucesso.' });
   } catch (error) {
     return res.status(400).json({ message: error.message });
+  }
+});
+
+router.post('/change-password/challenge', authenticate, async (req, res) => {
+  try {
+    const user = await getUserProfile(req.user.id);
+    const challenge = await createMfaChallenge({
+      user,
+      metadata: {
+        action: 'password_change'
+      }
+    });
+    return res.json({
+      challengeId: challenge.challengeId,
+      expiresAt: challenge.expiresAt,
+      debugCode: challenge.debugCode ?? null
+    });
+  } catch (error) {
+    return res.status(error.statusCode ?? 400).json({ message: error.message });
   }
 });
 
@@ -52,6 +80,25 @@ router.post('/deletion-request', authenticate, async (req, res) => {
     return res.json({ message: 'Solicitação de exclusão registrada.' });
   } catch (error) {
     return res.status(400).json({ message: error.message });
+  }
+});
+
+router.post('/me/mfa/otp/start', authenticate, async (req, res) => {
+  try {
+    const enrollment = await startUserOtpEnrollment({ userId: req.user.id, ipAddress: req.ip });
+    return res.json(enrollment);
+  } catch (error) {
+    return res.status(error.statusCode ?? 400).json({ message: error.message });
+  }
+});
+
+router.post('/me/mfa/otp/confirm', authenticate, async (req, res) => {
+  try {
+    const { enrollmentId, code } = req.body;
+    const user = await completeUserOtpEnrollment({ userId: req.user.id, enrollmentId, code, ipAddress: req.ip });
+    return res.json({ user });
+  } catch (error) {
+    return res.status(error.statusCode ?? 400).json({ message: error.message });
   }
 });
 

@@ -1,7 +1,10 @@
 import { Router } from 'express';
 import {
   registerUser,
+  confirmRegistrationEmail,
+  finalizeRegistration,
   loginUser,
+  initiateMfaMethod,
   refreshSession,
   revokeSession,
   requestPasswordReset,
@@ -14,10 +17,30 @@ const router = Router();
 
 router.post('/register', async (req, res) => {
   try {
-    const user = await registerUser(req.body);
-    return res.status(201).json({ user });
+    const result = await registerUser(req.body);
+    return res.status(201).json(result);
   } catch (error) {
     return res.status(400).json({ message: error.message });
+  }
+});
+
+router.post('/register/confirm', async (req, res) => {
+  try {
+    const { challengeId, code } = req.body;
+    const response = await confirmRegistrationEmail({ challengeId, code, ipAddress: req.ip });
+    return res.json(response);
+  } catch (error) {
+    return res.status(error.statusCode ?? 400).json({ message: error.message });
+  }
+});
+
+router.post('/register/otp', async (req, res) => {
+  try {
+    const { otpSetupId, otpCode } = req.body;
+    const user = await finalizeRegistration({ otpSetupId, otpCode, ipAddress: req.ip });
+    return res.json({ user });
+  } catch (error) {
+    return res.status(error.statusCode ?? 400).json({ message: error.message });
   }
 });
 
@@ -29,13 +52,7 @@ router.post('/login', loginRateLimiter, async (req, res) => {
     });
 
     if (result.mfaRequired) {
-      return res.json({
-        mfaRequired: true,
-        challengeId: result.challengeId,
-        expiresAt: result.expiresAt,
-        demoCode: result.demoCode,
-        passwordExpired: result.passwordExpired
-      });
+      return res.json(result);
     }
 
     return res.json({ mfaRequired: false });
@@ -44,10 +61,26 @@ router.post('/login', loginRateLimiter, async (req, res) => {
   }
 });
 
+router.post('/mfa/initiate', async (req, res) => {
+  try {
+    const { sessionId, method } = req.body;
+    const result = await initiateMfaMethod({ sessionId, method, ipAddress: req.ip });
+    return res.json(result);
+  } catch (error) {
+    return res.status(error.statusCode ?? 400).json({ message: error.message });
+  }
+});
+
 router.post('/mfa/verify', async (req, res) => {
   try {
-    const { challengeId, code } = req.body;
-    const result = await completeMfa({ challengeId, code, ipAddress: req.ip });
+    const { sessionId, method, code, otpEnrollmentId } = req.body;
+    const result = await completeMfa({
+      sessionId,
+      method,
+      code,
+      otpEnrollmentId,
+      ipAddress: req.ip
+    });
 
     return res.json({
       user: result.user,
@@ -89,7 +122,7 @@ router.post('/refresh', async (req, res) => {
 router.post('/logout', async (req, res) => {
   try {
     const { refreshToken, accessJti, userId } = req.body;
-    await revokeSession({ refreshToken, accessJti, userId, ipAddress: req.ip });
+    await revokeSession({ refreshToken, accessJti, userId });
     return res.status(204).end();
   } catch (error) {
     return res.status(400).json({ message: error.message });

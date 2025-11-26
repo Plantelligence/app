@@ -82,7 +82,7 @@ export const TechnologyPage = () => (
             Tecnologia Plantelligence
           </span>
           <h1 className="text-4xl font-bold leading-tight text-slate-50 sm:text-5xl">
-            Plantelligence transforma estufas em operações previsíveis e eficientes.
+            Automação inteligente que entende cada planta e entrega produtividade com segurança de ponta.
           </h1>
           <p className="text-lg text-slate-300">
             Com telemetria contínua, orquestração precisa de atuadores e camadas robustas de segurança, nossa solução garante controle total do ambiente agrícola. Tudo pronto para demonstrar agora, com autenticação multifator (MFA) e rastreabilidade completa para atender às normas e à LGPD.
