@@ -1,9 +1,8 @@
 node_modules/
-.env
-backend/.env
 *.log
 backend/db.sqlite
-backend/data/
-backend/logs/*.log
-backend/firebase-key.json
-.DS_Store
+backend/firebase-admin.json
+backend/.env
+
+# Firebase credentials
+*.service-account.json

@@ -7,7 +7,7 @@ Módulo de segurança full stack para o ecossistema **Plantelligence**, automati
 - **Frontend:** React (Vite), Tailwind CSS, Zustand, Axios.
 - **Criptografia:** AES-256-GCM e RSA-2048 (OAEP-SHA256).
 
-## Pré-requisitos 
+## Pré-requisitos
 - Node.js 18.18 ou superior.
 - npm 9+.
 
@@ -27,10 +27,6 @@ Módulo de segurança full stack para o ecossistema **Plantelligence**, automati
    ```
    - Backend: http://localhost:4000
    - Frontend: http://localhost:5173 (proxy configurado para `/api`).
-   - Credenciais iniciais (seed automático):
-     - Usuário: `admin@plantelligence.local`
-     - Senha: `Plant3ll!gence!`
-     - Ajuste via variáveis `DEFAULT_ADMIN_EMAIL`, `DEFAULT_ADMIN_PASSWORD`, `DEFAULT_ADMIN_FULLNAME` ou desative com `SEED_ADMIN=0`.
 
 ## Variáveis de Ambiente
 Crie um arquivo `backend/.env` (baseado em `.env.example`) para ajustar segredos e políticas:
@@ -61,9 +57,6 @@ backend/   # API Express, módulos de auth/crypto/middleware/logs, SQLite local
 frontend/  # Aplicação React/Vite com Tailwind e gerenciamento de sessão JWT
 docs/      # Requisitos, LGPD e visão geral
 ```
-
-## Observação para Deploy na Vercel
-- O backend é exposto como função serverless em `/api`. Garanta que o frontend utilize caminhos relativos iniciados em `/api/` (ex.: `/api/auth/login`) para que as chamadas funcionem corretamente tanto localmente quanto no ambiente Vercel.
 
 ## Testes Manuais Recomendados
 - Explorar a landing page e acionar o login pelo botão "Entrar" no topo.
