@@ -18,10 +18,34 @@ getFirebaseApp();
 const app = express();
 
 app.use(helmet());
+const allowedOrigins = (settings.frontendOrigin ?? '')
+  .split(',')
+  .map((entry) => entry.trim())
+  .filter(Boolean);
+
 app.use(
   cors({
-    origin: settings.frontendOrigin,
-    credentials: true
+    credentials: true,
+    origin: (origin, callback) => {
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+
+      const isAllowed =
+        allowedOrigins.length === 0 ||
+        allowedOrigins.some((allowed) => {
+          if (allowed === '*') {
+            return true;
+          }
+          if (allowed.startsWith('http://') || allowed.startsWith('https://')) {
+            return allowed === origin;
+          }
+          return origin.includes(allowed);
+        });
+
+      callback(isAllowed ? null : new Error('Origin not allowed by CORS'), isAllowed);
+    }
   })
 );
 app.use(express.json());
