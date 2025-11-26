@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "plantelligence-cloud",
+  "private_key_id": "12f5a9e93c1908c2953196b390ca1707ef364d53",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDFIkajxT5ZeIqx\nk34EiRsHmGwQuH0n3yZQ1ijoUODLiPMEwzj4JIaNRzbUTNCoD0+oLb0MfERisMf3\nCSaSsMnwGDAumSbc1coMWHQZEj7Paiga2AO6Nnch2dmY2YlPrylHcxU3c2uNeUnT\nIsLGLcANRd9ZakSZqeLNdW1Uej3xIVlTupgx4aDsA1m7SMgWXjDQNCbVvalmMo/4\n82dL+4SJpsH/CjbEFEhc/aAKdtT7Sia0TAqZlTaxL7mBZ9CUVD8dQ4PFzT/8D5uP\nfQnWkdr7hwN70/MRaTap5cnJk3bBWD06s4lL3byixV4vqQhSPKJet4UCgmJieqcZ\nuCGrIMYNAgMBAAECggEACGHJoaHbzGeZnsJ6n6bpwTlWp6EEjKW1G3JOXnm+joDw\nnlb5AjoMBjqihu/g3l3PoVhtME2iBb/mXLy6SQ9JzX2Qd5FtANj5RJbykXSrEDF/\najbISnURkdz8CX7/EuY2fzJ86DTuPDTNnLPewW5FZdBpq65e+NlWSq36cQFanA5K\nbfgvZS7scTXpaLpHhTw1V9ZG08nHxktwpz7gjzT3sWBEeZ9K5eqpW9nvy4RvN5y6\nLq6QlNQSOpxQCVJeatrcs38I5TqpsHTR0sX3bnrEUJASRP8qz4EbaF3SAU7PR0ja\nARwATadjGQEvonY1yHWz+0c0bVLK/fRen01K+xsLaQKBgQDhqrabaOMtNc2uQjVw\n+PO1GL/01LoAsN0bfC4sQY1lSI93wSCRHwdkTR56t+mnl0ycGcTKpfds84RPVkjS\nsAMG3j+rIKOUSULKeO3qyUY4eYcOKvz7pefm5tPR9fXJWubiAbL8oQ06i4bU3unT\nYkqMpZZ+MVkPFtx7tEdg6r2n5QKBgQDfobtqdy+myT9fuspT5+OW+Xk7puGR5xWA\n+tOv75/+OfuBdxGZtpOVXhf/xnvuLET5E5aypuZKS2drFxBomZBhyqBQ/+iQ8i5Z\nGVWdlz+yCLKU9k8QeBNkGRmDWxniN09QvOb42AMBVsikAUl6OKswxcg5aUK2oune\nt0uwQ0JzCQKBgHTxbJP4tNF28lF9iggzWsfcPY14t7Mn9E0L+zl/9vAnvAFJGcFa\nnRADTuo1aGYq5851JCAIBcJ2J3idtDtKbyceAUyDK4HqvSwDovdqunMFt1FGQbd+\n8EAeGmLR3T8tVjyEuOZl518RcxvZML8UTqG4JdbbZ9WD+Vo5wEufGg1pAoGBAJv3\nRSmEhFRTKQLP2EpagM0LorSqt8k1HDc/OCINAk2hDLqHW1wUDKvw2tYFDOvYLiZ0\ntfZVFmmcWz1B8ayx5RN+6P507DMi5JY5aA+nq8Gz9TCU9CFtTUDTjIqjH9M4dfW+\nOWw14yqs5vQS/bbjDOnQFsuLkP6lcmxk88GztwVZAoGBAKuaY96h1RW7ALyxjcR9\nYl/RNFjtBY/O8f9uN8QHIY4Ux4hYL6m98eofYzRsQk9KN8qy8TZrALqTAt0jV+Gh\ns5No21LLQA8yCeMf48xfE4BCIma2tWOZu+au4naxI8Us0zyNUSfcKIKifMjzadeV\nuuD2aDcRIG+q3VrCuUkEpbdW\n-----END PRIVATE KEY-----\n",
+  "client_email": "firebase-adminsdk-fbsvc@plantelligence-cloud.iam.gserviceaccount.com",
+  "client_id": "106849494436970581691",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40plantelligence-cloud.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
