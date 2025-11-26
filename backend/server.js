@@ -32,19 +32,22 @@ app.use(
         return;
       }
 
+      const isWildcard = allowedOrigins.includes('*');
       const isAllowed =
-        allowedOrigins.length === 0 ||
-        allowedOrigins.some((allowed) => {
-          if (allowed === '*') {
-            return true;
-          }
-          if (allowed.startsWith('http://') || allowed.startsWith('https://')) {
-            return allowed === origin;
-          }
-          return origin.includes(allowed);
-        });
+        isWildcard ||
+        allowedOrigins.some((allowed) => allowed.localeCompare(origin, undefined, { sensitivity: 'accent' }) === 0);
 
-      callback(isAllowed ? null : new Error('Origin not allowed by CORS'), isAllowed);
+      if (isAllowed || allowedOrigins.length === 0) {
+        callback(null, true);
+        return;
+      }
+
+      console.error(
+        `CORS: Requisição bloqueada de origem não permitida: ${origin}. Origens esperadas: ${
+          allowedOrigins.length ? allowedOrigins.join(', ') : '(nenhuma configurada)'
+        }`
+      );
+      callback(new Error('Origin not allowed by CORS'));
     }
   })
 );
