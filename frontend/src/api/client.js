@@ -1,8 +1,11 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore.js';
 
+const defaultBaseUrl = '/api';
+const configuredBaseUrl = (import.meta.env?.VITE_APP_API_URL ?? defaultBaseUrl).replace(/\/$/, '');
+
 const api = axios.create({
-  baseURL: '/api'
+  baseURL: configuredBaseUrl
 });
 
 let refreshPromise = null;
@@ -15,7 +18,7 @@ const refreshSession = async () => {
       throw new Error('Refresh token not available');
     }
 
-    refreshPromise = fetch('/api/auth/refresh', {
+    refreshPromise = fetch(`${configuredBaseUrl}/auth/refresh`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
