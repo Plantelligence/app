@@ -1,4 +1,4 @@
-# Plantelligence (Local Demo)
+# Plantelligence (Local Demo) 
 
 Módulo de segurança full stack para o ecossistema **Plantelligence**, automatizando estufas por tipo de planta. A demonstração apresenta uma experiência completa com landing page, autenticação forte (MFA), criptografia ponta a ponta e controles LGPD — tudo operando localmente.
 
