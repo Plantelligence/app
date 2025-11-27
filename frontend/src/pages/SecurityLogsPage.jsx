@@ -20,7 +20,8 @@ export const SecurityLogsPage = () => {
     setError(null);
     try {
       const result = await getSecurityLogs();
-      setLogs(result.logs ?? []);
+      const loginLogs = (result.logs ?? []).filter((log) => log.action === 'login_success');
+      setLogs(loginLogs);
     } catch (err) {
       setError(err.response?.data?.message ?? 'Não foi possível carregar os logs de segurança.');
     } finally {
@@ -54,9 +55,9 @@ export const SecurityLogsPage = () => {
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-6 rounded-lg border border-slate-800 bg-slate-900 p-8 text-sm text-slate-200 shadow-xl">
       <header className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold text-slate-100">Logs de segurança</h1>
+          <h1 className="text-2xl font-semibold text-slate-100">Registros de login</h1>
           <p className="mt-1 text-sm text-slate-400">
-            Cadeia imutável com hash encadeado para auditoria forense e governança LGPD.
+            Visualize data e hora dos acessos realizados pelos colaboradores na Plantelligence Platform.
           </p>
         </div>
         <Button variant="secondary" onClick={fetchLogs} disabled={loading}>
@@ -70,30 +71,33 @@ export const SecurityLogsPage = () => {
 
       {logs.length === 0 && !loading ? (
         <p className="rounded border border-slate-700 bg-slate-900/70 px-4 py-3 text-sm text-slate-300">
-          Nenhum evento recente encontrado. As entradas aparecerão conforme ações sensíveis forem executadas.
+          Nenhum login registrado ainda. Os acessos aparecerão aqui em ordem cronológica.
         </p>
       ) : (
-        <div className="max-h-[480px] space-y-3 overflow-y-auto pr-2 text-xs text-slate-200">
-          {logs.map((entry) => (
-            <article key={entry.id} className="rounded border border-slate-800 bg-slate-900/70 p-4">
-              <header className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-sm font-semibold text-emerald-300">{entry.action}</span>
-                <span className="text-xs text-slate-400">{entry.createdAt}</span>
-              </header>
-              {entry.userId && (
-                <p className="mt-2 text-xs text-slate-300">Usuário: {entry.userId}</p>
-              )}
-              <div className="mt-2 grid gap-1 text-[11px] text-slate-400 sm:grid-cols-2">
-                <span>Hash: {entry.hash}</span>
-                <span>Hash anterior: {entry.prevHash}</span>
-              </div>
-              {entry.metadata && (
-                <pre className="mt-3 whitespace-pre-wrap rounded border border-slate-800 bg-slate-950/60 p-3 text-[11px] text-slate-400">
-                  {JSON.stringify(entry.metadata, null, 2)}
-                </pre>
-              )}
-            </article>
-          ))}
+        <div className="max-h-[480px] space-y-3 overflow-y-auto pr-2 text-sm text-slate-200">
+          {logs.map((entry) => {
+            const formattedTimestamp = entry.createdAt
+              ? new Date(entry.createdAt).toLocaleString('pt-BR', {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit'
+                })
+              : 'Data indisponível';
+
+            return (
+              <article key={entry.id} className="rounded border border-slate-800 bg-slate-900/70 p-4">
+                <p className="text-xs uppercase tracking-[0.2em] text-emerald-300">Login confirmado</p>
+                <p className="mt-2 text-sm font-semibold text-slate-100">Colaborador ID: {entry.userId ?? 'N/D'}</p>
+                <p className="mt-1 text-sm text-slate-300">Data e hora: {formattedTimestamp}</p>
+                {entry.metadata?.ipAddress && (
+                  <p className="mt-1 text-xs text-slate-500">IP: {entry.metadata.ipAddress}</p>
+                )}
+              </article>
+            );
+          })}
         </div>
       )}
     </div>
