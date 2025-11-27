@@ -18,9 +18,27 @@ getFirebaseApp();
 const app = express();
 
 app.use(helmet());
+const normalizeOrigin = (value) => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  try {
+    const url = new URL(trimmed);
+    return url.origin;
+  } catch (_error) {
+    return trimmed.replace(/\/+$/, '');
+  }
+};
+
 const allowedOrigins = (settings.frontendOrigin ?? '')
   .split(',')
-  .map((entry) => entry.trim())
+  .map(normalizeOrigin)
   .filter(Boolean);
 
 app.use(
@@ -32,10 +50,11 @@ app.use(
         return;
       }
 
+      const normalizedOrigin = normalizeOrigin(origin);
       const isWildcard = allowedOrigins.includes('*');
       const isAllowed =
         isWildcard ||
-        allowedOrigins.some((allowed) => allowed.localeCompare(origin, undefined, { sensitivity: 'accent' }) === 0);
+        allowedOrigins.includes(normalizedOrigin);
 
       if (isAllowed || allowedOrigins.length === 0) {
         callback(null, true);

@@ -1,8 +1,27 @@
 import axios from 'axios';
 import { useAuthStore } from '../store/authStore.js';
 
-const defaultBaseUrl = '/api';
-const configuredBaseUrl = (import.meta.env?.VITE_APP_API_URL ?? defaultBaseUrl).replace(/\/$/, '');
+const resolveBaseUrl = () => {
+  const raw = (import.meta.env?.VITE_APP_API_URL ?? '').trim();
+
+  if (!raw) {
+    return '/api';
+  }
+
+  if (raw === '/api') {
+    return '/api';
+  }
+
+  if (raw.startsWith('http')) {
+    const cleaned = raw.replace(/\/+$/, '');
+    return cleaned.endsWith('/api') ? cleaned : `${cleaned}/api`;
+  }
+
+  const cleaned = raw.replace(/\/+$/, '');
+  return cleaned || '/api';
+};
+
+const configuredBaseUrl = resolveBaseUrl();
 
 const api = axios.create({
   baseURL: configuredBaseUrl
