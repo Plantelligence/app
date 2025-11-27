@@ -321,7 +321,9 @@ export const UserSettingsPage = () => {
             className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring focus:ring-emerald-500/40"
             disabled={loadingProfile}
           />
-          <span>Continuo autorizando o uso dos meus dados somente para automação e monitoramento das estufas.</span>
+          <span>
+            Continuo autorizando o tratamento dos meus dados pessoais exclusivamente para automação e monitoramento das estufas, e confirmo que li e estou de acordo com os Termos de Uso e a Política de Privacidade. Posso revogar este consentimento ou solicitar a exclusão dos meus dados a qualquer momento. Para mais informações, consulte os links disponíveis no rodapé do site.
+          </span>
         </label>
         <dl className="mt-4 grid gap-2 sm:grid-cols-2 text-xs text-slate-400">
           <div>
