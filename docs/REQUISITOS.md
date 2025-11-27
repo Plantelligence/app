@@ -1,4 +1,4 @@
-# Requisitos Funcionais Atendidos 
+# Requisitos Funcionais Atendidos
 
 ## Segurança e Autenticação
 - Cadastro com hash de senha (bcrypt) e consentimento LGPD obrigatório.
