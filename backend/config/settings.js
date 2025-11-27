@@ -74,6 +74,40 @@ let cachedCredential;
 let cachedApp;
 let cachedFirestore;
 
+const buildCredentialsFromEnv = () => {
+  const clientEmail = process.env.FIREBASE_CLIENT_EMAIL ?? null;
+  const privateKeyRaw = process.env.FIREBASE_PRIVATE_KEY ?? null;
+
+  if (!clientEmail || !privateKeyRaw) {
+    return null;
+  }
+
+  const normalizePrivateKey = privateKeyRaw.includes('\\n')
+    ? privateKeyRaw.replace(/\\n/g, '\n')
+    : privateKeyRaw;
+
+  const credential = {
+    type: process.env.FIREBASE_TYPE ?? 'service_account',
+    project_id: process.env.FIREBASE_PROJECT_ID ?? undefined,
+    private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID ?? undefined,
+    private_key: normalizePrivateKey,
+    client_email: clientEmail,
+    client_id: process.env.FIREBASE_CLIENT_ID ?? undefined,
+    auth_uri: process.env.FIREBASE_AUTH_URI ?? 'https://accounts.google.com/o/oauth2/auth',
+    token_uri: process.env.FIREBASE_TOKEN_URI ?? 'https://oauth2.googleapis.com/token',
+    auth_provider_x509_cert_url:
+      process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL ?? 'https://www.googleapis.com/oauth2/v1/certs',
+    client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL ?? undefined,
+    universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN ?? 'googleapis.com'
+  };
+
+  return JSON.stringify(
+    Object.fromEntries(
+      Object.entries(credential).filter(([, value]) => value !== undefined && value !== null)
+    )
+  );
+};
+
 const resolveCredentialsSource = () => {
   const inline = process.env.FIREBASE_CREDENTIALS;
   if (inline) {
@@ -81,19 +115,51 @@ const resolveCredentialsSource = () => {
   }
 
   const fileEnv = process.env.FIREBASE_CREDENTIALS_FILE;
-  if (!fileEnv) {
+  if (fileEnv) {
+    const resolvedPath = path.isAbsolute(fileEnv)
+      ? fileEnv
+      : path.resolve(backendRoot, fileEnv);
+
+    if (!fs.existsSync(resolvedPath)) {
+      throw new Error(`FIREBASE_CREDENTIALS_FILE not found at path: ${resolvedPath}`);
+    }
+
+    return fs.readFileSync(resolvedPath, 'utf8');
+  }
+
+  return buildCredentialsFromEnv();
+};
+
+const coerceFirebaseJson = (raw) => {
+  if (!raw) {
     return null;
   }
 
-  const resolvedPath = path.isAbsolute(fileEnv)
-    ? fileEnv
-    : path.resolve(backendRoot, fileEnv);
+  let candidate = raw.trim();
 
-  if (!fs.existsSync(resolvedPath)) {
-    throw new Error(`FIREBASE_CREDENTIALS_FILE not found at path: ${resolvedPath}`);
+  if (!candidate) {
+    return null;
   }
 
-  return fs.readFileSync(resolvedPath, 'utf8');
+  if (candidate.startsWith('"') && candidate.endsWith('"')) {
+    const unwrapped = candidate.slice(1, -1).replace(/\\"/g, '"');
+    candidate = unwrapped;
+  }
+
+  if (candidate.startsWith('{')) {
+    return candidate;
+  }
+
+  try {
+    const decoded = Buffer.from(candidate, 'base64').toString('utf8').trim();
+    if (decoded.startsWith('{')) {
+      return decoded;
+    }
+  } catch (error) {
+    // Ignore and fall through to throw below
+  }
+
+  throw new Error('Firebase credentials must be provided as JSON or base64 encoded JSON.');
 };
 
 const parseFirebaseCredentials = () => {
@@ -116,7 +182,12 @@ const parseFirebaseCredentials = () => {
   }
 
   try {
-    const parsed = JSON.parse(raw);
+    const jsonPayload = coerceFirebaseJson(raw);
+    if (!jsonPayload) {
+      return null;
+    }
+
+    const parsed = JSON.parse(jsonPayload);
 
     if (typeof parsed.private_key === 'string' && parsed.private_key.includes('\\n')) {
       parsed.private_key = parsed.private_key.replace(/\\n/g, '\n');
