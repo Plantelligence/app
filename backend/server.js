@@ -17,6 +17,11 @@ getFirebaseApp();
 
 const app = express();
 
+if (settings.trustProxy) {
+  const trustProxyValue = settings.trustProxy === true ? 1 : settings.trustProxy;
+  app.set('trust proxy', trustProxyValue);
+}
+
 app.use(helmet());
 const allowedOrigins = (settings.frontendOrigin ?? '')
   .split(',')
