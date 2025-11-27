@@ -96,7 +96,22 @@ export const UserSettingsPage = () => {
     setProfile((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  const handleRequestProfileSave = () => {
+    setProfileFeedback(null);
+    if (!profile?.consentGiven) {
+      setProfileError('Consentimento LGPD é obrigatório para salvar as alterações.');
+      return;
+    }
+    setProfileError(null);
+    setConfirmSaveProfile(true);
+  };
+
   const submitProfileUpdate = async () => {
+    if (!profile?.consentGiven) {
+      setConfirmSaveProfile(false);
+      setProfileError('Consentimento LGPD é obrigatório para salvar as alterações.');
+      return;
+    }
     setConfirmSaveProfile(false);
     setProfileFeedback(null);
     setProfileError(null);
@@ -292,7 +307,7 @@ export const UserSettingsPage = () => {
             <h2 className="text-lg font-semibold text-slate-100">Informações pessoais</h2>
             <p className="text-xs text-slate-400">Somente dados essenciais para operar o controlador da estufa.</p>
           </div>
-          <Button variant="secondary" onClick={() => setConfirmSaveProfile(true)} disabled={loadingProfile}>
+          <Button variant="secondary" onClick={handleRequestProfileSave} disabled={loadingProfile}>
             Salvar alterações
           </Button>
         </header>
@@ -321,7 +336,9 @@ export const UserSettingsPage = () => {
             className="mt-1 h-4 w-4 rounded border-slate-700 bg-slate-800 text-emerald-500 focus:ring focus:ring-emerald-500/40"
             disabled={loadingProfile}
           />
-          <span>Continuo autorizando o uso dos meus dados somente para automação e monitoramento das estufas.</span>
+          <span>
+            Continuo autorizando o tratamento dos meus dados pessoais exclusivamente para automação e monitoramento das estufas, e confirmo que li e estou de acordo com os Termos de Uso e a Política de Privacidade. Posso revogar este consentimento ou solicitar a exclusão dos meus dados a qualquer momento. Para mais informações, consulte os links disponíveis no rodapé do site.
+          </span>
         </label>
         <dl className="mt-4 grid gap-2 sm:grid-cols-2 text-xs text-slate-400">
           <div>
