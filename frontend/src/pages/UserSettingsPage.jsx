@@ -97,6 +97,12 @@ export const UserSettingsPage = () => {
   };
 
   const submitProfileUpdate = async () => {
+    if (!profile?.consentGiven) {
+      setProfileError(
+        'Confirme o consentimento LGPD antes de salvar as informações pessoais.'
+      );
+      return;
+    }
     setConfirmSaveProfile(false);
     setProfileFeedback(null);
     setProfileError(null);
@@ -292,7 +298,11 @@ export const UserSettingsPage = () => {
             <h2 className="text-lg font-semibold text-slate-100">Informações pessoais</h2>
             <p className="text-xs text-slate-400">Somente dados essenciais para operar o controlador da estufa.</p>
           </div>
-          <Button variant="secondary" onClick={() => setConfirmSaveProfile(true)} disabled={loadingProfile}>
+          <Button
+            variant="secondary"
+            onClick={() => setConfirmSaveProfile(true)}
+            disabled={loadingProfile || !profile?.consentGiven}
+          >
             Salvar alterações
           </Button>
         </header>
