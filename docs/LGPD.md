@@ -1,4 +1,4 @@
-# Conformidade LGPD — Plantelligence Demo
+# Conformidade LGPD — Plantelligence Demo 
 
 ## Bases Legais e Consentimento
 - Coleta limitada a nome, e-mail e telefone para autenticação e contato operacional.
