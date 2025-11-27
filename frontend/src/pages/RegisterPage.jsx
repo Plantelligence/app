@@ -287,7 +287,7 @@ export const RegisterPage = () => {
                 required
               />
               <span>
-                Confirmo que li e estou de acordo com os Termos de Uso e a Política de Privacidade, autorizando o tratamento dos meus dados pessoais exclusivamente para utilização da Plantelligence Platform. Posso revogar este consentimento ou solicitar a exclusão dos meus dados a qualquer momento. Para mais informações, consulte os links disponíveis no rodapé do site.
+                Confirmo que li e estou de acordo com os Termos de Uso e a Política de Privacidade, autorizando o tratamento dos meus dados pessoais exclusivamente para utilização da Plantelligence. Posso revogar este consentimento ou solicitar a exclusão dos meus dados a qualquer momento. Para mais informações, consulte os links disponíveis no rodapé do site.
               </span>
             </label>
           </div>
