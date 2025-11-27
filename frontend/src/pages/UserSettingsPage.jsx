@@ -98,9 +98,7 @@ export const UserSettingsPage = () => {
 
   const submitProfileUpdate = async () => {
     if (!profile?.consentGiven) {
-      setProfileError(
-        'Confirme o consentimento LGPD antes de salvar as informações pessoais.'
-      );
+      setProfileError('Consentimento LGPD é obrigatório para atualizar seus dados.');
       return;
     }
     setConfirmSaveProfile(false);
@@ -300,8 +298,14 @@ export const UserSettingsPage = () => {
           </div>
           <Button
             variant="secondary"
-            onClick={() => setConfirmSaveProfile(true)}
-            disabled={loadingProfile || !profile?.consentGiven}
+            onClick={() => {
+              if (!profile?.consentGiven) {
+                setProfileError('Consentimento LGPD é obrigatório para atualizar seus dados.');
+                return;
+              }
+              setConfirmSaveProfile(true);
+            }}
+            disabled={loadingProfile}
           >
             Salvar alterações
           </Button>
