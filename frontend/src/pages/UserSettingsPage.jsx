@@ -96,7 +96,22 @@ export const UserSettingsPage = () => {
     setProfile((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  const handleRequestProfileSave = () => {
+    setProfileFeedback(null);
+    if (!profile?.consentGiven) {
+      setProfileError('Consentimento LGPD é obrigatório para salvar as alterações.');
+      return;
+    }
+    setProfileError(null);
+    setConfirmSaveProfile(true);
+  };
+
   const submitProfileUpdate = async () => {
+    if (!profile?.consentGiven) {
+      setConfirmSaveProfile(false);
+      setProfileError('Consentimento LGPD é obrigatório para salvar as alterações.');
+      return;
+    }
     setConfirmSaveProfile(false);
     setProfileFeedback(null);
     setProfileError(null);
@@ -292,7 +307,7 @@ export const UserSettingsPage = () => {
             <h2 className="text-lg font-semibold text-slate-100">Informações pessoais</h2>
             <p className="text-xs text-slate-400">Somente dados essenciais para operar o controlador da estufa.</p>
           </div>
-          <Button variant="secondary" onClick={() => setConfirmSaveProfile(true)} disabled={loadingProfile}>
+          <Button variant="secondary" onClick={handleRequestProfileSave} disabled={loadingProfile}>
             Salvar alterações
           </Button>
         </header>
