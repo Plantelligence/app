@@ -6,3 +6,5 @@ backend/.env
 
 # Firebase credentials
 *.service-account.json
+backend/firebase-admin.json
+

@@ -37,39 +37,6 @@ const deriveTotpEncryptionKey = () => {
   return crypto.createHash('sha256').update(fallback).digest();
 };
 
-const parseTrustProxySetting = () => {
-  const rawValue =
-    process.env.TRUST_PROXY ??
-    process.env.EXPRESS_TRUST_PROXY ??
-    (process.env.VERCEL || process.env.SERVERLESS ? '1' : null);
-
-  if (rawValue == null) {
-    return false;
-  }
-
-  const trimmed = rawValue.trim();
-
-  if (!trimmed) {
-    return false;
-  }
-
-  const lower = trimmed.toLowerCase();
-
-  if (lower === 'true') {
-    return true;
-  }
-
-  if (lower === 'false' || lower === '0') {
-    return false;
-  }
-
-  if (/^\d+$/.test(trimmed)) {
-    return Number.parseInt(trimmed, 10);
-  }
-
-  return trimmed;
-};
-
 export const settings = {
   port: Number.parseInt(process.env.PORT ?? '4000', 10),
   frontendOrigin: process.env.FRONTEND_ORIGIN ?? 'http://localhost:5173',
@@ -97,8 +64,7 @@ export const settings = {
     from: process.env.SMTP_FROM ?? process.env.SMTP_USER ?? null
   },
   mfaDebugMode: (process.env.MFA_DEBUG_MODE ?? 'false').toLowerCase() === 'true',
-  mfaIssuer: process.env.MFA_ISSUER ?? 'Plantelligence',
-  trustProxy: parseTrustProxySetting()
+  mfaIssuer: process.env.MFA_ISSUER ?? 'Plantelligence'
 };
 
 settings.mfaTotpEncryptionKey = deriveTotpEncryptionKey();
